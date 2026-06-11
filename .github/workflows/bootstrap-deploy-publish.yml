@@ -61,15 +61,15 @@ jobs:
 
       - name: Collect deployable artifact
         run: |
-          mkdir -p ../dist
-          cp .pio/build/m5stack-atom/firmware.bin \
-            ../dist/tesla-fsd-esp32-m5stack-atom.bin
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp "$GITHUB_WORKSPACE/esp32/.pio/build/m5stack-atom/firmware.bin" \
+            "$GITHUB_WORKSPACE/dist/tesla-fsd-esp32-m5stack-atom.bin"
 
       - name: Upload deploy artifact
         uses: actions/upload-artifact@v4
         with:
           name: tesla-fsd-esp32-m5stack-atom
-          path: ../dist/tesla-fsd-esp32-m5stack-atom.bin
+          path: ${{ github.workspace }}/dist/tesla-fsd-esp32-m5stack-atom.bin
           if-no-files-found: error
 
   publish:
@@ -77,10 +77,18 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Validate manual release input
         if: github.event_name == 'workflow_dispatch' && inputs.publish
         run: |
-          test -n "${{ inputs.release_tag }}"
+          if [ -z "${{ inputs.release_tag }}" ]; then
+            echo "release_tag is required when publish=true" >&2
+            exit 1
+          fi
           case "${{ inputs.release_tag }}" in
             v*) ;;
             *) echo "release_tag must start with 'v'" >&2; exit 1 ;;
